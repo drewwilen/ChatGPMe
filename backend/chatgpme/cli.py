@@ -15,7 +15,11 @@ def build_parser() -> argparse.ArgumentParser:
     ingest = subparsers.add_parser("ingest", help="Ingest local files for a user")
     ingest.add_argument("--user-id", required=True)
     ingest.add_argument("--source-type", default="local_files")
-    ingest.add_argument("--source-dir", required=True)
+    ingest.add_argument("--source-dir")
+    ingest.add_argument(
+        "--source-config-json",
+        help="JSON string merged into source_config (useful for google_drive)",
+    )
 
     generate = subparsers.add_parser("generate", help="Generate baseline or personalized draft")
     generate.add_argument("--user-id", required=True)
@@ -32,10 +36,16 @@ def main() -> None:
 
     if args.command == "ingest":
         pipeline = IngestionPipeline()
+        source_config = {}
+        if args.source_config_json:
+            source_config.update(json.loads(args.source_config_json))
+        if args.source_dir:
+            source_config["source_dir"] = args.source_dir
+
         summary = pipeline.ingest(
             user_id=args.user_id,
             source_type=args.source_type,
-            source_config={"source_dir": args.source_dir},
+            source_config=source_config,
         )
         print(json.dumps(asdict(summary), indent=2))
     elif args.command == "generate":

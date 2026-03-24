@@ -41,6 +41,40 @@ Current repo state appears to be effectively greenfield, so the immediate goal i
 - Stub or partially implement Google Drive/Gmail auth and fetch logic only if local ingestion is already stable.
 - Deliverable by end of period: at least one reproducible corpus pipeline that turns raw writing samples into retrieval-ready chunks.
 
+### David Goldfarb Progress Update (Completed)
+- Implemented local ingestion connector (`local_files`) with canonical `Document` output.
+- Implemented preprocessing pipeline: text cleanup, chunking, and token-estimate metadata.
+- Implemented persistence layer:
+  - Filesystem outputs (`documents.jsonl`, `chunks.jsonl`) per user.
+  - SQLite metadata store for documents/chunks.
+- Added Google Drive connector (`google_drive`) behind the same ingestion interface.
+- Added Google OAuth Desktop flow for ingestion testing with token caching.
+- Added owner-only + Google Docs-only default filtering for safer and more relevant ingest:
+  - Owner filter: `'me' in owners`
+  - MIME default: `application/vnd.google-apps.document`
+- Verified end-to-end ingestion from a real Google account into retrieval-ready chunks.
+- Added secret-safety controls:
+  - `backend/secrets/` and runtime data ignored in git.
+  - Local permissions tightened for credential/token files.
+
+### David Goldfarb Remaining TODOs
+- Add Gmail connector (`gmail`) mapped into canonical `Document` format.
+- Expand ingestion format support where needed (`.docx`, `.pdf`) with safe parsing.
+- Improve ingestion controls:
+  - Better include/exclude filters by folder/query/time range.
+  - Pagination and batching behavior for large corpora.
+- Add ingestion tests:
+  - Unit tests for connector/preprocess/storage behavior.
+  - Regression checks across at least two corpora.
+- Add observability:
+  - Structured logging around ingest steps and failures.
+  - Basic ingest metrics (docs processed, chunks produced, failures).
+- Support deployment-grade multi-user OAuth (instead of local desktop flow):
+  - Use one team-owned Google Cloud OAuth app for production.
+  - Replace single local token file with encrypted per-user token storage.
+  - Add backend auth endpoints for connect/callback/disconnect.
+  - Ensure users sign in with their own Google account without creating their own Google project.
+
 ### Noam Canter
 - Own personalization logic and evaluation.
 - Implement embeddings, retrieval, and personalized prompt assembly.
