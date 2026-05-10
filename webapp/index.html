@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ChatGPMe</title>
+    <link rel="stylesheet" href="/app.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div>
+          <h1>ChatGPMe</h1>
+          <p class="subtitle">Style-aware writing assistant with editor completion and assistant drafting.</p>
+        </div>
+        <div class="backend-status" id="backendStatus">Checking model…</div>
+      </header>
+
+      <nav class="tabs">
+        <button class="tab is-active" data-tab="editor">Editor</button>
+        <button class="tab" data-tab="assistant">Assistant</button>
+      </nav>
+
+      <section class="tab-panel is-active" data-panel="editor">
+        <div class="panel-grid">
+          <section class="card">
+            <div class="card-header">
+              <h2>Editor</h2>
+              <p>Type normally. Suggestions appear below. Press <kbd>Tab</kbd> to accept, <kbd>Esc</kbd> to dismiss.</p>
+            </div>
+            <div class="editor-shell">
+              <pre id="editorGhost" class="editor-ghost" aria-hidden="true"></pre>
+              <textarea id="editorInput" class="editor-input" placeholder="Start writing here..."></textarea>
+            </div>
+          </section>
+          <section class="card suggestion-card">
+            <div class="card-header">
+              <h2>Quick Actions</h2>
+              <p id="editorMeta">Idle</p>
+            </div>
+            <p class="hint-copy">Suggestions now appear inline as ghost text in the editor.</p>
+            <div class="actions">
+              <button id="acceptSuggestion" class="primary">Accept Tab</button>
+              <button id="dismissSuggestion">Dismiss</button>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="tab-panel" data-panel="assistant">
+        <div class="panel-grid assistant-grid">
+          <section class="card">
+            <div class="card-header">
+              <h2>Assistant</h2>
+              <p>Choose a writing task, describe what you want, and generate a draft in your style.</p>
+            </div>
+            <label class="field">
+              <span>Mode</span>
+              <select id="assistantMode">
+                <option value="assistant_draft">Draft</option>
+                <option value="assistant_rewrite">Rewrite</option>
+                <option value="assistant_continue">Continue</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Prompt</span>
+              <textarea id="assistantInput" class="assistant-input" placeholder="Describe the draft or paste text to rewrite..."></textarea>
+            </label>
+            <div class="actions">
+              <button id="generateAssistant" class="primary">Generate</button>
+              <button id="sendToEditor">Send To Editor</button>
+            </div>
+          </section>
+          <section class="card">
+            <div class="card-header">
+              <h2>Result</h2>
+              <p id="assistantMeta">No generation yet</p>
+            </div>
+            <pre id="assistantOutput" class="suggestion-output"></pre>
+          </section>
+        </div>
+      </section>
+    </main>
+    <script src="/app.js"></script>
+  </body>
+</html>

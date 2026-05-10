@@ -82,6 +82,7 @@ Optional environment variables:
 
 - `CHATGPME_MODEL`
 - `CHATGPME_ADAPTER`
+- `CHATGPME_REMOTE_API`
 - `CHATGPME_HOST`
 - `CHATGPME_PORT`
 
@@ -89,6 +90,8 @@ The app includes:
 
 - `Editor` tab: continuation suggestions with accept-by-tab
 - `Assistant` tab: draft, rewrite, and continue tools using the same backend
+
+If `CHATGPME_REMOTE_API` is set, the app sends generation requests to that remote HTTP endpoint instead of loading the model locally.
 
 ## Use the repo directly from Colab
 

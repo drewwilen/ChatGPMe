@@ -9,6 +9,7 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
+from urllib import request
 from urllib.parse import urlparse
 
 
@@ -18,8 +19,48 @@ DEFAULT_MODEL = os.environ.get("CHATGPME_MODEL", "TinyLlama/TinyLlama-1.1B-Chat-
 DEFAULT_ADAPTER = os.environ.get(
     "CHATGPME_ADAPTER", str(ROOT / "artifacts" / "tinyllama-style-lora-mvp")
 )
+REMOTE_API = os.environ.get("CHATGPME_REMOTE_API", "").rstrip("/")
 DEFAULT_HOST = os.environ.get("CHATGPME_HOST", "127.0.0.1")
 DEFAULT_PORT = int(os.environ.get("CHATGPME_PORT", "8000"))
+
+
+class RemoteGenerationBackend:
+    def __init__(self, base_url: str) -> None:
+        self.base_url = base_url
+
+    def status(self) -> dict[str, Any]:
+        try:
+            with request.urlopen(f"{self.base_url}/api/health", timeout=10) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+            backend = payload.get("backend", {})
+            backend["remote_url"] = self.base_url
+            return backend
+        except Exception as exc:  # pragma: no cover - runtime dependent
+            return {
+                "ready": False,
+                "loaded": False,
+                "remote_url": self.base_url,
+                "error": str(exc),
+            }
+
+    def generate(self, text: str, mode: str, max_new_tokens: int, temperature: float, top_p: float) -> dict[str, Any]:
+        payload = json.dumps(
+            {
+                "text": text,
+                "mode": mode,
+                "max_new_tokens": max_new_tokens,
+                "temperature": temperature,
+                "top_p": top_p,
+            }
+        ).encode("utf-8")
+        req = request.Request(
+            f"{self.base_url}/api/generate",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with request.urlopen(req, timeout=120) as response:
+            return json.loads(response.read().decode("utf-8"))
 
 
 class GenerationBackend:
@@ -139,7 +180,7 @@ def build_prompt(text: str, mode: str) -> str:
     return normalized
 
 
-BACKEND = GenerationBackend(DEFAULT_MODEL, DEFAULT_ADAPTER)
+BACKEND = RemoteGenerationBackend(REMOTE_API) if REMOTE_API else GenerationBackend(DEFAULT_MODEL, DEFAULT_ADAPTER)
 
 
 class AppHandler(BaseHTTPRequestHandler):
@@ -216,8 +257,11 @@ class AppHandler(BaseHTTPRequestHandler):
 def main() -> int:
     server = ThreadingHTTPServer((DEFAULT_HOST, DEFAULT_PORT), AppHandler)
     print(f"ChatGPMe app running at http://{DEFAULT_HOST}:{DEFAULT_PORT}")
-    print(f"Model: {DEFAULT_MODEL}")
-    print(f"Adapter: {DEFAULT_ADAPTER}")
+    if REMOTE_API:
+        print(f"Remote inference: {REMOTE_API}")
+    else:
+        print(f"Model: {DEFAULT_MODEL}")
+        print(f"Adapter: {DEFAULT_ADAPTER}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
