@@ -1,12 +1,34 @@
-/google_drive_docs/
-/data/*
-!/data/README.md
-/artifacts/
-/.venv/
+# Python
 __pycache__/
 *.py[cod]
+.venv/
+
+# Local runtime artifacts — never commit user data or secrets
+data/
+backend/data/
+backend/secrets/
+
+# OS noise
 .DS_Store
-/.venv/
+
+# Claude Code
+.claude/
+
+# Node
+frontend/node_modules/
+node_modules/
+frontend/.next/
+
+# Env files with secrets
+.env.local
+.env*.local
+
+# Extra safety: auth/token files
+*.token.json
+*credentials*.json
+
+# Other local dirs
+/google_drive_docs/
 /artifacts/
 /colab_upload/
 /colab_upload.zip
