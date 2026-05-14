@@ -4,12 +4,23 @@ __pycache__/
 .venv/
 
 # Local runtime artifacts
-data/
+data/*
+!data/README.md
 backend/secrets/
 
 # OS noise
 .DS_Store
 
+# Env files with secrets
+.env.local
+.env*.local
+
 # Extra safety: auth/token files
 *.token.json
 *credentials*.json
+
+# Other local dirs
+/google_drive_docs/
+/artifacts/
+/colab_upload/
+/colab_upload.zip
