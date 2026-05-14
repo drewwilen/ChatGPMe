@@ -11,6 +11,9 @@ backend/secrets/
 # OS noise
 .DS_Store
 
+# Claude Code
+.claude/
+
 # Env files with secrets
 .env.local
 .env*.local
