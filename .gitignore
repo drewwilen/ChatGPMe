@@ -17,6 +17,7 @@ backend/secrets/
 # Node
 frontend/node_modules/
 node_modules/
+frontend/.next/
 
 # Env files with secrets
 .env.local
