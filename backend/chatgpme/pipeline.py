@@ -2,7 +2,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .connectors import BaseConnector, GoogleDriveConnector, LocalFilesConnector
+from .connectors import (
+    AccessTokenGoogleDriveConnector,
+    BaseConnector,
+    GoogleDriveConnector,
+    LocalFilesConnector,
+)
 from .preprocess import preprocess_documents
 from .storage import CorpusStore
 
@@ -21,6 +26,7 @@ class IngestionPipeline:
         self.connector_registry: dict[str, BaseConnector] = {
             "local_files": LocalFilesConnector(),
             "google_drive": GoogleDriveConnector(),
+            "google_drive_token": AccessTokenGoogleDriveConnector(),
         }
 
     def ingest(self, user_id: str, source_type: str, source_config: dict) -> IngestSummary:

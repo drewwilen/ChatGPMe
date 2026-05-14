@@ -50,97 +50,10 @@ class LocalFilesConnector(BaseConnector):
         return documents
 
 
-class GoogleDriveConnector(BaseConnector):
-    # Keep MVP scope tight: owner-only Google Docs by default.
-    DEFAULT_MIME_TYPES = {"application/vnd.google-apps.document"}
+class _GoogleDriveMixin:
+    """Shared Google Drive API helpers used by both connector variants."""
 
-    DRIVE_SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
-
-    def load_user_corpus(self, user_id: str, source_config: dict) -> list[Document]:
-        creds_path = source_config.get("credentials_path")
-        if not creds_path:
-            raise ValueError("source_config must include 'credentials_path' for google_drive")
-
-        token_path = source_config.get("token_path", "backend/secrets/google_token.json")
-        folder_id = source_config.get("folder_id")
-        custom_query = source_config.get("query")
-        owner_only = bool(source_config.get("owner_only", True))
-        max_files = int(source_config.get("max_files", 25))
-        include_mime_types = set(source_config.get("include_mime_types", self.DEFAULT_MIME_TYPES))
-
-        service = self._build_drive_service(
-            credentials_path=creds_path,
-            token_path=token_path,
-        )
-        files = self._list_files(
-            service=service,
-            folder_id=folder_id,
-            custom_query=custom_query,
-            owner_only=owner_only,
-            max_files=max_files,
-            include_mime_types=include_mime_types,
-        )
-
-        documents: list[Document] = []
-        for file_meta in files:
-            text = self._download_text(service, file_meta)
-            if not text or not text.strip():
-                continue
-
-            modified_time = file_meta.get("modifiedTime")
-            created_at = None
-            if isinstance(modified_time, str):
-                # Example: 2026-03-24T16:31:42.123Z
-                created_at = datetime.fromisoformat(modified_time.replace("Z", "+00:00"))
-
-            documents.append(
-                Document(
-                    id=str(uuid.uuid4()),
-                    user_id=user_id,
-                    source="google_drive",
-                    source_path=f"gdrive://{file_meta['id']}",
-                    text=text,
-                    doc_type=self._doc_type_from_mime(file_meta.get("mimeType", "")),
-                    created_at=created_at,
-                )
-            )
-
-        return documents
-
-    def _build_drive_service(self, credentials_path: str, token_path: str):
-        try:
-            from google.auth.transport.requests import Request
-            from google.oauth2.credentials import Credentials
-            from google_auth_oauthlib.flow import InstalledAppFlow
-            from googleapiclient.discovery import build
-        except ImportError as exc:
-            raise ValueError(
-                "Google Drive dependencies are missing. Install with: "
-                "pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib"
-            ) from exc
-
-        creds = None
-        token_file = Path(token_path).expanduser().resolve()
-        token_file.parent.mkdir(parents=True, exist_ok=True)
-        if token_file.exists():
-            creds = Credentials.from_authorized_user_file(str(token_file), self.DRIVE_SCOPES)
-
-        if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
-                creds.refresh(Request())
-            else:
-                creds_file = Path(credentials_path).expanduser().resolve()
-                if not creds_file.exists():
-                    raise ValueError(f"credentials_path not found: {creds_file}")
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    str(creds_file),
-                    self.DRIVE_SCOPES,
-                )
-                creds = flow.run_local_server(port=0)
-
-            token_file.write_text(creds.to_json(), encoding="utf-8")
-
-        return build("drive", "v3", credentials=creds)
+    DEFAULT_MIME_TYPES: set[str] = {"application/vnd.google-apps.document"}
 
     def _list_files(
         self,
@@ -207,3 +120,119 @@ class GoogleDriveConnector(BaseConnector):
             "text/plain": "txt",
         }
         return mapping.get(mime_type, mime_type.replace("/", "_"))
+
+    def _files_to_documents(
+        self, files: list[dict[str, Any]], service, user_id: str
+    ) -> list[Document]:
+        documents: list[Document] = []
+        for file_meta in files:
+            text = self._download_text(service, file_meta)
+            if not text or not text.strip():
+                continue
+
+            modified_time = file_meta.get("modifiedTime")
+            created_at = None
+            if isinstance(modified_time, str):
+                created_at = datetime.fromisoformat(modified_time.replace("Z", "+00:00"))
+
+            documents.append(
+                Document(
+                    id=str(uuid.uuid4()),
+                    user_id=user_id,
+                    source="google_drive",
+                    source_path=f"gdrive://{file_meta['id']}",
+                    text=text,
+                    doc_type=self._doc_type_from_mime(file_meta.get("mimeType", "")),
+                    created_at=created_at,
+                )
+            )
+        return documents
+
+
+class GoogleDriveConnector(_GoogleDriveMixin, BaseConnector):
+    """Local/CLI use: OAuth via credentials file + token cache on disk."""
+
+    DRIVE_SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
+
+    def load_user_corpus(self, user_id: str, source_config: dict) -> list[Document]:
+        creds_path = source_config.get("credentials_path")
+        if not creds_path:
+            raise ValueError("source_config must include 'credentials_path' for google_drive")
+
+        token_path = source_config.get("token_path", "backend/secrets/google_token.json")
+        folder_id = source_config.get("folder_id")
+        custom_query = source_config.get("query")
+        owner_only = bool(source_config.get("owner_only", True))
+        max_files = int(source_config.get("max_files", 25))
+        include_mime_types = set(source_config.get("include_mime_types", self.DEFAULT_MIME_TYPES))
+
+        service = self._build_drive_service(creds_path, token_path)
+        files = self._list_files(service, folder_id, custom_query, owner_only, max_files, include_mime_types)
+        return self._files_to_documents(files, service, user_id)
+
+    def _build_drive_service(self, credentials_path: str, token_path: str):
+        try:
+            from google.auth.transport.requests import Request
+            from google.oauth2.credentials import Credentials
+            from google_auth_oauthlib.flow import InstalledAppFlow
+            from googleapiclient.discovery import build
+        except ImportError as exc:
+            raise ValueError(
+                "Google Drive dependencies are missing. Install with: "
+                "pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib"
+            ) from exc
+
+        creds = None
+        token_file = Path(token_path).expanduser().resolve()
+        token_file.parent.mkdir(parents=True, exist_ok=True)
+        if token_file.exists():
+            creds = Credentials.from_authorized_user_file(str(token_file), self.DRIVE_SCOPES)
+
+        if not creds or not creds.valid:
+            if creds and creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+            else:
+                creds_file = Path(credentials_path).expanduser().resolve()
+                if not creds_file.exists():
+                    raise ValueError(f"credentials_path not found: {creds_file}")
+                flow = InstalledAppFlow.from_client_secrets_file(str(creds_file), self.DRIVE_SCOPES)
+                creds = flow.run_local_server(port=0)
+
+            token_file.write_text(creds.to_json(), encoding="utf-8")
+
+        return build("drive", "v3", credentials=creds)
+
+
+class AccessTokenGoogleDriveConnector(_GoogleDriveMixin, BaseConnector):
+    """Web use: accepts a pre-obtained OAuth access token (e.g. from NextAuth on Vercel).
+
+    Users never touch credentials files — they sign in via the web app and
+    the frontend passes their Google access token to the backend.
+    """
+
+    def load_user_corpus(self, user_id: str, source_config: dict) -> list[Document]:
+        access_token = source_config.get("access_token")
+        if not access_token:
+            raise ValueError("source_config must include 'access_token'")
+
+        folder_id = source_config.get("folder_id")
+        owner_only = bool(source_config.get("owner_only", True))
+        max_files = int(source_config.get("max_files", 25))
+        include_mime_types = set(source_config.get("include_mime_types", self.DEFAULT_MIME_TYPES))
+
+        service = self._build_service_from_token(access_token)
+        files = self._list_files(service, folder_id, None, owner_only, max_files, include_mime_types)
+        return self._files_to_documents(files, service, user_id)
+
+    def _build_service_from_token(self, access_token: str):
+        try:
+            from google.oauth2.credentials import Credentials
+            from googleapiclient.discovery import build
+        except ImportError as exc:
+            raise ValueError(
+                "Google Drive dependencies are missing. Install with: "
+                "pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib"
+            ) from exc
+
+        creds = Credentials(token=access_token)
+        return build("drive", "v3", credentials=creds)

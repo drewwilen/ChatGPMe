@@ -65,6 +65,14 @@ class CorpusStore:
             for chunk in chunks:
                 f.write(json.dumps(asdict(chunk), ensure_ascii=False) + "\n")
 
+        # style_train.jsonl — {"text": "..."} per chunk, ready for train_lora.py
+        style_train_path = user_dir / "style_train.jsonl"
+        with style_train_path.open("w", encoding="utf-8") as f:
+            for chunk in chunks:
+                text = chunk.text.strip()
+                if text:
+                    f.write(json.dumps({"text": text}, ensure_ascii=False) + "\n")
+
         with sqlite3.connect(self.sqlite_path) as conn:
             # Replace prior corpus snapshot for this user on each ingest.
             conn.execute(

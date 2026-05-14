@@ -3,9 +3,9 @@ __pycache__/
 *.py[cod]
 .venv/
 
-# Local runtime artifacts
-data/*
-!data/README.md
+# Local runtime artifacts — never commit user data or secrets
+data/
+backend/data/
 backend/secrets/
 
 # OS noise
