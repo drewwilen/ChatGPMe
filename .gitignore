@@ -13,3 +13,15 @@ backend/secrets/
 # Extra safety: auth/token files
 *.token.json
 *credentials*.json
+/google_drive_docs/
+/data/*
+!/data/README.md
+/artifacts/
+/.venv/
+__pycache__/
+*.py[cod]
+.DS_Store
+/.venv/
+/artifacts/
+/colab_upload/
+/colab_upload.zip
