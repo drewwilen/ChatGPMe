@@ -6,6 +6,37 @@ import json
 from pathlib import Path
 
 
+def import_training_dependencies():
+    try:
+        import torch
+        from datasets import Dataset
+        from peft import LoraConfig, get_peft_model
+        from transformers import AutoModelForCausalLM, AutoTokenizer, Trainer, TrainingArguments
+    except ImportError as exc:
+        raise SystemExit(
+            "Training imports failed.\n"
+            f"ImportError: {exc.__class__.__name__}: {exc}\n"
+            "Top-level packages may be installed, but one of their runtime dependencies "
+            "or version constraints is failing. In Colab, rerun the import block below to "
+            "identify the exact module:\n"
+            "  import torch\n"
+            "  from datasets import Dataset\n"
+            "  from peft import LoraConfig, get_peft_model\n"
+            "  from transformers import AutoModelForCausalLM, AutoTokenizer, Trainer, TrainingArguments\n"
+        ) from exc
+
+    return {
+        "torch": torch,
+        "Dataset": Dataset,
+        "LoraConfig": LoraConfig,
+        "get_peft_model": get_peft_model,
+        "AutoModelForCausalLM": AutoModelForCausalLM,
+        "AutoTokenizer": AutoTokenizer,
+        "Trainer": Trainer,
+        "TrainingArguments": TrainingArguments,
+    }
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Train a style LoRA adapter on raw text continuations.")
     parser.add_argument("--model-name", required=True, help="Base Hugging Face causal LM model name or path.")
@@ -44,15 +75,15 @@ def main() -> int:
     if not dataset_path.exists():
         raise SystemExit(f"Dataset path does not exist: {dataset_path}")
 
-    try:
-        import torch
-        from datasets import Dataset
-        from peft import LoraConfig, get_peft_model
-        from transformers import AutoModelForCausalLM, AutoTokenizer, Trainer, TrainingArguments
-    except ImportError as exc:
-        raise SystemExit(
-            "Missing training dependencies. Install torch, transformers, datasets, accelerate, and peft first."
-        ) from exc
+    deps = import_training_dependencies()
+    torch = deps["torch"]
+    Dataset = deps["Dataset"]
+    LoraConfig = deps["LoraConfig"]
+    get_peft_model = deps["get_peft_model"]
+    AutoModelForCausalLM = deps["AutoModelForCausalLM"]
+    AutoTokenizer = deps["AutoTokenizer"]
+    Trainer = deps["Trainer"]
+    TrainingArguments = deps["TrainingArguments"]
 
     examples = load_text_examples(dataset_path)
     if not examples:
@@ -83,7 +114,7 @@ def main() -> int:
 
     model = AutoModelForCausalLM.from_pretrained(
         args.model_name,
-        dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+        torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
     )
     lora_config = LoraConfig(
         r=args.lora_r,

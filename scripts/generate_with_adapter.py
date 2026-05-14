@@ -32,7 +32,7 @@ def main() -> int:
 
     base_model = AutoModelForCausalLM.from_pretrained(
         args.model_name,
-        dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+        torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
     )
     model = PeftModel.from_pretrained(base_model, args.adapter_path)
     model.eval()
