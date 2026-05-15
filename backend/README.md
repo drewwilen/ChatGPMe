@@ -54,7 +54,7 @@ pip install -r backend/requirements.txt
 Start API:
 
 ```bash
-PYTHONPATH=backend uvicorn chatgpme.api:app --reload
+PYTHONPATH=backend ./backend/.venv/bin/python -m uvicorn chatgpme.api:app --reload
 ```
 
 Example request:

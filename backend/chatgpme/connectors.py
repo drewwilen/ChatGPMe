@@ -55,6 +55,13 @@ class _GoogleDriveMixin:
 
     DEFAULT_MIME_TYPES: set[str] = {"application/vnd.google-apps.document"}
 
+    def _normalize_drive_error(self, exc: Exception) -> ValueError:
+        status = getattr(getattr(exc, "resp", None), "status", None)
+        reason = getattr(exc, "_get_reason", None)
+        detail = reason() if callable(reason) else str(exc)
+        prefix = f"Google Drive API error ({status})" if status else "Google Drive API error"
+        return ValueError(f"{prefix}: {detail}")
+
     def _list_files(
         self,
         service,
@@ -76,18 +83,21 @@ class _GoogleDriveMixin:
             base_parts.append(f"({custom_query})")
         query = " and ".join(base_parts)
 
-        response = (
-            service.files()
-            .list(
-                q=query,
-                pageSize=max_files,
-                fields="files(id,name,mimeType,modifiedTime)",
-                orderBy="modifiedTime desc",
-                supportsAllDrives=True,
-                includeItemsFromAllDrives=True,
+        try:
+            response = (
+                service.files()
+                .list(
+                    q=query,
+                    pageSize=max_files,
+                    fields="files(id,name,mimeType,modifiedTime)",
+                    orderBy="modifiedTime desc",
+                    supportsAllDrives=True,
+                    includeItemsFromAllDrives=True,
+                )
+                .execute()
             )
-            .execute()
-        )
+        except Exception as exc:
+            raise self._normalize_drive_error(exc) from exc
         return response.get("files", [])
 
     def _download_text(self, service, file_meta: dict[str, Any]) -> str:
@@ -109,8 +119,11 @@ class _GoogleDriveMixin:
         buffer = io.BytesIO()
         downloader = MediaIoBaseDownload(buffer, request)
         done = False
-        while not done:
-            _, done = downloader.next_chunk()
+        try:
+            while not done:
+                _, done = downloader.next_chunk()
+        except Exception as exc:
+            raise self._normalize_drive_error(exc) from exc
 
         return buffer.getvalue().decode("utf-8", errors="ignore")
 

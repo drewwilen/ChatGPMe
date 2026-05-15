@@ -70,6 +70,8 @@ def ingest(req: IngestRequest) -> dict:
         }
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Unexpected ingest error: {exc}") from exc
 
 
 @app.post("/ingest/gdrive")
@@ -97,6 +99,8 @@ def ingest_gdrive(req: GDriveIngestRequest) -> dict:
         }
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Unexpected Google Drive ingest error: {exc}") from exc
 
 
 @app.post("/generate")

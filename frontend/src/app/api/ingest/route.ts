@@ -29,19 +29,31 @@ export async function POST(req: Request) {
       }),
     });
 
-    const data = await res.json();
+    const raw = await res.text();
+    let data: Record<string, unknown> | null = null;
+
+    try {
+      data = raw ? (JSON.parse(raw) as Record<string, unknown>) : null;
+    } catch {
+      data = null;
+    }
 
     if (!res.ok) {
       return NextResponse.json(
-        { error: data.detail ?? "Backend error" },
+        {
+          error:
+            (typeof data?.detail === "string" && data.detail) ||
+            raw ||
+            "Backend error",
+        },
         { status: res.status }
       );
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json(data ?? {});
   } catch {
     return NextResponse.json(
-      { error: "Could not reach ingestion backend" },
+      { error: `Could not reach ingestion backend at ${backendUrl}` },
       { status: 502 }
     );
   }
