@@ -1,0 +1,343 @@
+[1/10] Scoring: Write me an email to my professor explaining why I miss...
+  baseline 2.5  adapter 3.5  → ADAPTER
+
+[2/10] Scoring: Write a cover letter opening for a software engineering...
+  baseline 1.0  adapter 2.5  → ADAPTER
+
+[3/10] Scoring: Write an introduction paragraph for an essay about clim...
+  baseline 1.0  adapter 1.0  → TIE
+
+[4/10] Scoring: Write a text message to a friend canceling plans tonigh...
+  baseline 2.5  adapter 2.5  → TIE
+
+[5/10] Scoring: Describe what it feels like to walk through a forest in...
+  baseline 3.2  adapter 4.2  → ADAPTER
+
+[6/10] Scoring: Write a short paragraph about the importance of friends...
+  Attempt 1 failed (ServerError), retrying in 10s...
+  baseline 2.2  adapter 3.2  → ADAPTER
+
+[7/10] Scoring: What does it mean to live a good life?...
+  baseline 1.0  adapter 2.5  → ADAPTER
+
+[8/10] Scoring: To be, or not to be, that is the question. Write a cont...
+  baseline 1.0  adapter 2.0  → ADAPTER
+
+[9/10] Scoring: All the world's a stage. Explain what Shakespeare meant...
+  baseline 2.2  adapter 3.5  → ADAPTER
+
+[10/10] Scoring: What light through yonder window breaks? Continue this ...
+  baseline 3.5  adapter 3.2  → BASELINE
+
+
+==========================================================================
+  FULL REPORT
+==========================================================================
+
+──────────────────────────────────────────────────────────────────────────
+  Prompt 1  [PROFESSIONAL]  →  ADAPTER WINS
+  "Write me an email to my professor explaining why I missed class."
+──────────────────────────────────────────────────────────────────────────
+  Dimension                  Baseline    Adapter    Delta
+  ────────────────────────────────────────────────────────
+  Stylistic Similarity           2.0/10       3.0/10   +1.0 ↑
+    Baseline : The sentence structure and phrasing are modern and direct, lacking Shakespeare's characteristic inversions and complex clauses.
+    Adapter  : The sentence structure and directness are too modern and lack Shakespeare's characteristic inversions and elaborate phrasing.
+  Vocabulary                     3.0/10       4.0/10   +1.0 ↑
+    Baseline : The vocabulary is contemporary business and academic language, devoid of Shakespeare's archaic words and poetic diction.
+    Adapter  : While 'unwell' and 'repulsive' are acceptable, the overall word choice is too plain and lacks the richness and archaic flavor of Shakespearean English.
+  Tone                           3.0/10       4.0/10   +1.0 ↑
+    Baseline : The tone is formal and professional, but lacks the dramatic flair, emotional depth, or rhetorical flourish found in Shakespeare's works.
+    Adapter  : The tone is apologetic and straightforward, but it doesn't capture the dramatic flair, heightened emotion, or formal politeness often found in Shakespeare's characters.
+  Authenticity                   2.0/10       3.0/10   +1.0 ↑
+    Baseline : The subject line and the content are entirely anachronistic and do not reflect any known aspect of Shakespeare's writing or the context in which he wrote.
+    Adapter  : The content is a modern excuse for absence, lacking the historical context, dramatic situations, or poetic devices that define Shakespeare's authenticity.
+  ────────────────────────────────────────────────────────
+  Average                        2.5/10       3.5/10   +1.0
+  Baseline : Subject line: Request for a Missed Class Explanation from Professor XYZ
+To whom it may concern,
+
+I am writing this lette...
+  Adapter  : “Professor,
+
+I have missed class today, and I’d like to explain why. I was feeling
+unwell, and the thought of attending ...
+  Verdict  : This text is a very loose approximation of Shakespeare, primarily in its attempt at formal address and apology, but it falls significantly short in vocabulary, sentence structure, and overall spirit.
+
+──────────────────────────────────────────────────────────────────────────
+  Prompt 2  [PROFESSIONAL]  →  ADAPTER WINS
+  "Write a cover letter opening for a software engineering internship."
+──────────────────────────────────────────────────────────────────────────
+  Dimension                  Baseline    Adapter    Delta
+  ────────────────────────────────────────────────────────
+  Stylistic Similarity           1.0/10       2.0/10   +1.0 ↑
+    Baseline : The text is a modern cover letter, employing contemporary sentence structure and directness, which is entirely unlike Shakespeare's dramatic and poetic style.
+    Adapter  : The text uses modern sentence structure and lacks the characteristic iambic pentameter and complex syntax of Shakespeare.
+  Vocabulary                     1.0/10       3.0/10   +2.0 ↑
+    Baseline : The vocabulary is entirely modern and technical, lacking any of the archaic words, inversions, or figurative language characteristic of Shakespeare.
+    Adapter  : The vocabulary is entirely modern and functional, devoid of the archaic words and poetic phrasing found in Shakespeare's works.
+  Tone                           1.0/10       3.0/10   +2.0 ↑
+    Baseline : The tone is professional, polite, and functional, a stark contrast to Shakespeare's often elevated, emotional, or comedic tones.
+    Adapter  : The tone is formal and professional, unlike the dramatic, emotional, or comedic tones prevalent in Shakespeare's plays.
+  Authenticity                   1.0/10       2.0/10   +1.0 ↑
+    Baseline : This is a standard professional document, bearing no resemblance to the historical context or literary conventions of Shakespeare's era.
+    Adapter  : The subject matter, the use of technical terms, and the overall communication style are completely anachronistic to Shakespeare's era.
+  ────────────────────────────────────────────────────────
+  Average                        1.0/10       2.5/10   +1.5
+  Baseline : Cover Letter for Software Engineering Internship [Your Name] (Date)
+
+[Address], __________
+(Job Title/Position Applied F...
+  Adapter  : Recipient:
+
+Good morning.
+
+You have been chosen to work on a software engineering project, which
+will require you to per...
+  Verdict  : This text bears very little resemblance to Shakespeare's writing, being a modern professional communication.
+
+──────────────────────────────────────────────────────────────────────────
+  Prompt 3  [ACADEMIC]  →  TIE
+  "Write an introduction paragraph for an essay about climate change."
+──────────────────────────────────────────────────────────────────────────
+  Dimension                  Baseline    Adapter    Delta
+  ────────────────────────────────────────────────────────
+  Stylistic Similarity           1.0/10       1.0/10   +0.0 =
+    Baseline : The sentence structure is modern and direct, lacking the inversions, complex clauses, and rhythmic patterns characteristic of Shakespeare.
+    Adapter  : The text uses modern, direct prose with repetitive phrasing, unlike Shakespeare's complex sentence structures and varied vocabulary.
+  Vocabulary                     1.0/10       1.0/10   +0.0 =
+    Baseline : The vocabulary is entirely contemporary and academic, with no archaic words, metaphors, or figurative language found in Shakespeare's works.
+    Adapter  : The vocabulary is entirely modern and scientific, lacking the archaic words, neologisms, and figurative language characteristic of Shakespeare.
+  Tone                           1.0/10       1.0/10   +0.0 =
+    Baseline : The tone is informative and neutral, typical of academic writing, whereas Shakespeare's tone ranges from dramatic and poetic to comedic and philosophical.
+    Adapter  : The tone is factual and declarative, devoid of the dramatic, poetic, or rhetorical flourishes found in Shakespeare's works.
+  Authenticity                   1.0/10       1.0/10   +0.0 =
+    Baseline : The text is a straightforward exposition of a modern concept, bearing no resemblance to the historical context, dramatic conventions, or poetic sensibilities of Shakespeare.
+    Adapter  : The subject matter, sentence construction, and word choice are entirely anachronistic and bear no resemblance to Shakespeare's writing.
+  ────────────────────────────────────────────────────────
+  Average                        1.0/10       1.0/10   +0.0
+  Baseline : Introduction Paragraph Example 1 (Informal)
+
+Introduction: This paper discusses a topic that is important to many people...
+  Adapter  : Introduction
+
+Climate change is a real and present danger to the planet. It is the
+unforeseen and unforeseeable conseque...
+  Verdict  : This text is entirely dissimilar to Shakespeare's writing in every aspect.
+
+──────────────────────────────────────────────────────────────────────────
+  Prompt 4  [CASUAL]  →  TIE
+  "Write a text message to a friend canceling plans tonight."
+──────────────────────────────────────────────────────────────────────────
+  Dimension                  Baseline    Adapter    Delta
+  ────────────────────────────────────────────────────────
+  Stylistic Similarity           2.0/10       2.0/10   +0.0 =
+    Baseline : The sentence structure is modern and direct, lacking the inversions and complex clauses characteristic of Shakespeare.
+    Adapter  : The sentence structure and phrasing are too modern and direct for Shakespearean prose.
+  Vocabulary                     3.0/10       3.0/10   +0.0 =
+    Baseline : The vocabulary is entirely modern and functional, with no archaic words or elevated language found in Shakespeare's works.
+    Adapter  : While 'shall' and 'carry' are present, the overall word choice is contemporary and lacks archaic terms.
+  Tone                           3.0/10       3.0/10   +0.0 =
+    Baseline : The tone is polite and apologetic in a contemporary business-like manner, not the dramatic or poetic tone of Shakespeare.
+    Adapter  : The tone is informal and conversational, unlike Shakespeare's often elevated or dramatic style.
+  Authenticity                   2.0/10       2.0/10   +0.0 =
+    Baseline : The content is a mundane, modern request, devoid of the themes, characters, or dramatic situations found in Shakespeare's plays and sonnets.
+    Adapter  : The context of a 'text message' and the casual nature of the cancellation are entirely anachronistic.
+  ────────────────────────────────────────────────────────
+  Average                        2.5/10       2.5/10   +0.0
+  Baseline : Cancel dinner reservation with family at 7 pm on Friday, August 20th. I'm sorry for any inconvenience this causes you bu...
+  Adapter  : Write a text message to a friend canceling plans tonight.
+
+I am writing this from the other side of the world, but I sha...
+  Verdict  : This text bears very little resemblance to Shakespeare's writing due to its modern context, vocabulary, and tone.
+
+──────────────────────────────────────────────────────────────────────────
+  Prompt 5  [DESCRIPTIVE]  →  ADAPTER WINS
+  "Describe what it feels like to walk through a forest in autumn."
+──────────────────────────────────────────────────────────────────────────
+  Dimension                  Baseline    Adapter    Delta
+  ────────────────────────────────────────────────────────
+  Stylistic Similarity           3.0/10       4.0/10   +1.0 ↑
+    Baseline : The sentence structure is modern and lacks the inversions and complex clauses typical of Shakespeare.
+    Adapter  : The sentence structure and rhythm are somewhat reminiscent of Shakespeare, but lack the complexity and poetic devices characteristic of his work.
+  Vocabulary                     4.0/10       5.0/10   +1.0 ↑
+    Baseline : While some words like 'mesmerized' and 'burgundy' are not anachronistic, the overall word choice is contemporary and lacks Shakespearean vocabulary.
+    Adapter  : While words like 'hath' and 'breeches' are period-appropriate, the overall vocabulary is quite simple and lacks the rich, evocative language of Shakespeare.
+  Tone                           3.0/10       4.0/10   +1.0 ↑
+    Baseline : The tone is conversational and descriptive, not the elevated, dramatic, or poetic tone found in Shakespeare's works.
+    Adapter  : The tone is observational and descriptive, but it doesn't capture the dramatic intensity, wit, or profound emotional depth often found in Shakespeare's writing.
+  Authenticity                   3.0/10       4.0/10   +1.0 ↑
+    Baseline : The text uses modern colloquialisms and sentence construction, making it feel distinctly un-Shakespearean.
+    Adapter  : The use of archaic language and a somewhat formal structure offers a superficial resemblance, but the content and execution are far from authentic Shakespearean prose.
+  ────────────────────────────────────────────────────────
+  Average                        3.2/10       4.2/10   +1.0
+  Baseline : I can't help but feel mesmerized by this seasonal display that surrounds me as we head out on our morning hike today, so...
+  Adapter  : Autumn hath her beauty now,
+And the leaves are red, and golden brown,
+And the trees are shining in the sun,
+And the air ...
+  Verdict  : This text presents a mild imitation of Shakespearean style, employing a few archaic words and a somewhat formal structure, but it falls short in vocabulary richness, thematic depth, and authentic poetic complexity.
+
+──────────────────────────────────────────────────────────────────────────
+  Prompt 6  [PHILOSOPHICAL]  →  ADAPTER WINS
+  "Write a short paragraph about the importance of friendship."
+──────────────────────────────────────────────────────────────────────────
+  Dimension                  Baseline    Adapter    Delta
+  ────────────────────────────────────────────────────────
+  Stylistic Similarity           2.0/10       3.0/10   +1.0 ↑
+    Baseline : The sentence structure and flow are modern and direct, lacking Shakespeare's characteristic inversions and complex clauses.
+    Adapter  : The sentence structure and phrasing are too modern and direct, lacking Shakespeare's characteristic inversions and elaborate constructions.
+  Vocabulary                     3.0/10       4.0/10   +1.0 ↑
+    Baseline : While some words like 'essential' and 'companionship' are not entirely out of place, the overall lexicon is contemporary and lacks Shakespeare's richer, more archaic vocabulary.
+    Adapter  : While 'venerable' and 'utmost' are somewhat elevated, the overall word choice is too plain and lacks the rich, archaic vocabulary common in Shakespeare.
+  Tone                           2.0/10       3.0/10   +1.0 ↑
+    Baseline : The tone is informative and straightforward, devoid of the dramatic, poetic, or often elevated emotional register found in Shakespeare's works.
+    Adapter  : The tone is overly self-important and lacks the dramatic flair, emotional depth, or poetic sensibility of Shakespeare's characters.
+  Authenticity                   2.0/10       3.0/10   +1.0 ↑
+    Baseline : The subject matter is treated in a modern, analytical way, unlike Shakespeare's often allegorical or character-driven explorations of themes.
+    Adapter  : The repetitive closing and the straightforward self-description feel more like a modern formal letter than a Shakespearean piece.
+  ────────────────────────────────────────────────────────
+  Average                        2.2/10       3.2/10   +1.0
+  Baseline : Importance Of Friendship In Life 
+
+Friendships are essential to our lives, as they provide us with support, companionshi...
+  Adapter  : I am a most venerable man, and of the utmost worth, both in body and soul.
+I have many acquaintances, both of the civil ...
+  Verdict  : This text exhibits a very low degree of similarity to Shakespeare's writing, primarily due to its modern sentence structure, plain vocabulary, and uncharacteristic tone.
+
+──────────────────────────────────────────────────────────────────────────
+  Prompt 7  [PHILOSOPHICAL]  →  ADAPTER WINS
+  "What does it mean to live a good life?"
+──────────────────────────────────────────────────────────────────────────
+  Dimension                  Baseline    Adapter    Delta
+  ────────────────────────────────────────────────────────
+  Stylistic Similarity           1.0/10       2.0/10   +1.0 ↑
+    Baseline : The text uses modern business jargon and a direct, informational structure, which is entirely unlike Shakespeare's poetic and dramatic style.
+    Adapter  : The text uses simple, repetitive sentence structures and a direct, almost aphoristic style, which is far removed from Shakespeare's complex syntax and varied sentence lengths.
+  Vocabulary                     1.0/10       3.0/10   +2.0 ↑
+    Baseline : The vocabulary is comprised of contemporary business terms such as 'investment analysis,' 'acquisition,' and 'industry sector,' bearing no resemblance to Shakespeare's Elizabethan English.
+    Adapter  : The vocabulary is extremely basic and lacks the rich, archaic, and often metaphorical language characteristic of Shakespeare.
+  Tone                           1.0/10       3.0/10   +2.0 ↑
+    Baseline : The tone is formal, professional, and transactional, a stark contrast to Shakespeare's often passionate, dramatic, or comedic tones.
+    Adapter  : The tone is didactic and philosophical in a very straightforward manner, lacking the dramatic intensity, emotional range, or poetic flourish of Shakespeare.
+  Authenticity                   1.0/10       2.0/10   +1.0 ↑
+    Baseline : The content, format, and language are unequivocally modern business communication, lacking any authentic Shakespearean elements.
+    Adapter  : The text's simplicity, repetitive nature, and lack of characteristic Shakespearean devices make it feel entirely inauthentic.
+  ────────────────────────────────────────────────────────
+  Average                        1.0/10       2.5/10   +1.5
+  Baseline : Good Life Definition Request for Investment Analysis (Memo) 10/28/17 9:35 AM
+To [Name]
+[Title], on behalf of our company...
+  Adapter  : Our life is to live, and to live a good life is to live so that it may be
+a life of good.
+
+What is the good?
+
+To do what...
+  Verdict  : This text bears very little resemblance to Shakespeare's writing due to its simplistic structure, basic vocabulary, and uncharacteristic tone.
+
+──────────────────────────────────────────────────────────────────────────
+  Prompt 8  [DRAMATIC]  →  ADAPTER WINS
+  "To be, or not to be, that is the question. Write a continuation."
+──────────────────────────────────────────────────────────────────────────
+  Dimension                  Baseline    Adapter    Delta
+  ────────────────────────────────────────────────────────
+  Stylistic Similarity           1.0/10       2.0/10   +1.0 ↑
+    Baseline : The text is a modern, functional document with no discernible Shakespearean stylistic elements.
+    Adapter  : The text uses simple, declarative sentences and repetition, which is unlike Shakespeare's complex sentence structures and varied phrasing.
+  Vocabulary                     1.0/10       3.0/10   +2.0 ↑
+    Baseline : The vocabulary is entirely contemporary and administrative, lacking any archaic or poetic language characteristic of Shakespeare.
+    Adapter  : The vocabulary is extremely basic and modern, lacking the rich, archaic, and poetic language characteristic of Shakespeare.
+  Tone                           1.0/10       2.0/10   +1.0 ↑
+    Baseline : The tone is formal and bureaucratic, a stark contrast to Shakespeare's dramatic, emotional, or comedic tones.
+    Adapter  : The tone is dry, analytical, and almost like a riddle, which is far removed from Shakespeare's dramatic, emotional, or comedic tones.
+  Authenticity                   1.0/10       1.0/10   +0.0 =
+    Baseline : The text is a modern business communication, bearing no resemblance to the linguistic and thematic authenticity of Shakespeare's works.
+    Adapter  : The text is a meta-commentary on a famous Shakespearean quote, not an attempt to write in his style.
+  ────────────────────────────────────────────────────────
+  Average                        1.0/10       2.0/10   +1.0
+  Baseline : Acknowledgment Letter for Mentorship Program Applications...
+  Adapter  : “To be, or not to be, that is the question. To be or not to be,
+that is the question.”
+
+The first words are the first wo...
+  Verdict  : This text bears very little resemblance to Shakespeare's actual writing due to its simplistic structure, modern vocabulary, and analytical tone.
+
+──────────────────────────────────────────────────────────────────────────
+  Prompt 9  [DRAMATIC]  →  ADAPTER WINS
+  "All the world's a stage. Explain what Shakespeare meant."
+──────────────────────────────────────────────────────────────────────────
+  Dimension                  Baseline    Adapter    Delta
+  ────────────────────────────────────────────────────────
+  Stylistic Similarity           2.0/10       3.0/10   +1.0 ↑
+    Baseline : The sentence structure and formality are modern, lacking Shakespeare's characteristic inversions and complex clauses.
+    Adapter  : The sentence structure and repetition are too simplistic and direct for Shakespeare's typical complex and varied phrasing.
+  Vocabulary                     3.0/10       4.0/10   +1.0 ↑
+    Baseline : While 'theatrical' and 'pertaining' are somewhat elevated, the core vocabulary is contemporary and functional, not archaic or poetic.
+    Adapter  : While 'thou' and 'thy' are present, the overall word choice is very basic and lacks the richness and archaic flavor of Shakespearean language.
+  Tone                           2.0/10       4.0/10   +2.0 ↑
+    Baseline : The tone is that of a formal modern request, devoid of Shakespeare's dramatic flair, emotional depth, or rhetorical flourish.
+    Adapter  : The tone is one of simple grievance, lacking the dramatic intensity, poetic flourish, or philosophical depth often found in Shakespeare's expressions of suffering.
+  Authenticity                   2.0/10       3.0/10   +1.0 ↑
+    Baseline : The subject matter and phrasing are entirely anachronistic to Shakespeare's era and writing style.
+    Adapter  : The repetitive, almost chant-like structure and the straightforward declaration of being wronged feel more like a modern interpretation of grievance than authentic Shakespearean dialogue.
+  ────────────────────────────────────────────────────────
+  Average                        2.2/10       3.5/10   +1.2
+  Baseline : Request for Access to Documentation on Theatre Design Processes
+
+Subject: Application For Access To Information On Theat...
+  Adapter  : When thou art dead,
+My soul shall not mourn thee;
+Thy bones are dust, my spirit
+Lies in a tomb.
+
+I have been wronged.
+
+A...
+  Verdict  : This text uses a few archaic pronouns but otherwise lacks the complexity, vocabulary, and dramatic nuance characteristic of Shakespeare's writing.
+
+──────────────────────────────────────────────────────────────────────────
+  Prompt 10  [DRAMATIC]  →  BASELINE WINS
+  "What light through yonder window breaks? Continue this scene."
+──────────────────────────────────────────────────────────────────────────
+  Dimension                  Baseline    Adapter    Delta
+  ────────────────────────────────────────────────────────
+  Stylistic Similarity           3.0/10       3.0/10   +0.0 =
+    Baseline : The sentence structure and dramatic opening are reminiscent of Shakespeare, but the descriptive language is more modern.
+    Adapter  : The repetitive structure and simple declarative sentences are not characteristic of Shakespeare's complex sentence constructions and varied rhythms.
+  Vocabulary                     4.0/10       3.0/10   -1.0 ↓
+    Baseline : While 'abyssal' and 'chasm' have a somewhat elevated feel, the overall word choice lacks the richness and archaic quality of Shakespeare's lexicon.
+    Adapter  : The vocabulary is extremely basic and lacks the rich, archaic, and often metaphorical language found in Shakespeare's works.
+  Tone                           4.0/10       4.0/10   +0.0 =
+    Baseline : The tone is dramatic and suspenseful, but it doesn't quite capture the specific blend of heightened emotion and poetic formality found in Shakespeare.
+    Adapter  : While there's a sense of defiance, the tone is too blunt and lacks the dramatic nuance and emotional depth typical of Shakespearean characters.
+  Authenticity                   3.0/10       3.0/10   +0.0 =
+    Baseline : The text attempts a dramatic opening and uses some elevated language, but it doesn't fully embody the linguistic patterns and conventions of Elizabethan English.
+    Adapter  : The text feels like a modern attempt at a simple declaration rather than an authentic piece of Elizabethan drama.
+  ────────────────────────────────────────────────────────
+  Average                        3.5/10       3.2/10   -0.2
+  Baseline : LIGHT THROUGH YONDER WINDOW BREAKS!
+
+We stand on a narrow ledge, facing down into an abyssal chasm that is alive with sh...
+  Adapter  : Go, get you gone;
+I am no man’s wife;
+I am the daughter of a tradesman,
+A tradesman’s daughter.
+
+I will, I will, I will,...
+  Verdict  : This text bears only a superficial resemblance to Shakespeare's writing, lacking its characteristic complexity, vocabulary, and dramatic depth.
+
+==========================================================================
+  SUMMARY TABLE
+==========================================================================
+  Dimension                  Baseline    Adapter    Delta
+  ────────────────────────────────────────────────────────
+  Stylistic Similarity           1.8/10       2.5/10   +0.7 ↑
+  Vocabulary                     2.4/10       3.3/10   +0.9 ↑
+  Tone                           2.1/10       3.1/10   +1.0 ↑
+  Authenticity                   1.8/10       2.4/10   +0.6 ↑
+  ────────────────────────────────────────────────────────
+  Overall Average                2.0/10       2.8/10   +0.8
+
+  Adapter wins 7/10 · Baseline wins 1/10 · Ties 2/10
+==========================================================================

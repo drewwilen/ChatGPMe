@@ -27,8 +27,17 @@ frontend/.next/
 *.token.json
 *credentials*.json
 
+# Env files with secrets (use .env.example as template)
+.env
+
+# Logs
+logs/
+*.log
+
+# Large zip bundles
+*.zip
+
 # Other local dirs
 /google_drive_docs/
 /artifacts/
 /colab_upload/
-/colab_upload.zip
