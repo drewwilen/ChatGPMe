@@ -3,6 +3,15 @@ import { NextResponse } from "next/server";
 
 import { authOptions } from "@/lib/auth";
 
+function isGoogleAuthRefreshError(message: string) {
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes("need to refresh the access token") ||
+    normalized.includes("must specify refresh_token") ||
+    normalized.includes("the credentials do not contain the necessary fields")
+  );
+}
+
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.accessToken) {
@@ -32,14 +41,16 @@ export async function POST(req: Request) {
     }
 
     if (!res.ok) {
+      const errorMessage =
+        (typeof data?.detail === "string" && data.detail) ||
+        raw ||
+        "Backend error";
       return NextResponse.json(
         {
-          error:
-            (typeof data?.detail === "string" && data.detail) ||
-            raw ||
-            "Backend error",
+          error: errorMessage,
+          authExpired: isGoogleAuthRefreshError(errorMessage),
         },
-        { status: res.status },
+        { status: isGoogleAuthRefreshError(errorMessage) ? 401 : res.status },
       );
     }
 
