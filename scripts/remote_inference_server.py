@@ -26,6 +26,12 @@ def build_prompt(text: str, mode: str) -> str:
         return normalized
     if mode == "assistant_continue":
         return normalized
+    if mode == "assistant_comment":
+        return (
+            "You are leaving a concise, helpful margin comment in a document.\n"
+            "Read the document context, focus on the selected passage, and return only the comment text.\n\n"
+            f"{normalized}\n\nComment:"
+        )
     if mode == "assistant_rewrite":
         return (
             "Rewrite the following in the same writing voice, preserving the meaning while improving clarity.\n\n"

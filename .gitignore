@@ -18,6 +18,7 @@ backend/secrets/
 frontend/node_modules/
 node_modules/
 frontend/.next/
+frontend/tsconfig.tsbuildinfo
 
 # Env files with secrets
 .env.local

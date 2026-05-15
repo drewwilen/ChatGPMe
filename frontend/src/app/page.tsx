@@ -1,10 +1,11 @@
 "use client";
 
+import Image from "next/image";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 
 type SourceMode = "recent" | "selection";
-type TabId = "setup" | "complete" | "inference" | "editor" | "assistant";
+type TabId = "directions" | "setup" | "inference" | "editor" | "assistant";
 
 interface DriveFile {
   id: string;
@@ -52,12 +53,23 @@ interface SetupStep {
   tab: TabId;
 }
 
+interface EditorSelectionState {
+  start: number;
+  end: number;
+  text: string;
+}
+
+interface SelectionComment {
+  selection: string;
+  comment: string;
+}
+
 const REMOTE_URL_STORAGE_KEY = "chatgpme.remoteUrl";
 
 export default function Home() {
   const { data: session, status } = useSession();
 
-  const [activeTab, setActiveTab] = useState<TabId>("setup");
+  const [activeTab, setActiveTab] = useState<TabId>("directions");
   const [sourceMode, setSourceMode] = useState<SourceMode>("recent");
   const [maxFiles, setMaxFiles] = useState(25);
   const [ownerOnly, setOwnerOnly] = useState(true);
@@ -84,11 +96,16 @@ export default function Home() {
   const [editorInput, setEditorInput] = useState("");
   const [currentSuggestion, setCurrentSuggestion] = useState("");
   const [editorMeta, setEditorMeta] = useState("Idle");
+  const [editorSelection, setEditorSelection] = useState<EditorSelectionState | null>(null);
+  const [commentInstruction, setCommentInstruction] = useState("");
+  const [selectionComment, setSelectionComment] = useState<SelectionComment | null>(null);
+  const [selectionCommentMeta, setSelectionCommentMeta] = useState(
+    "Highlight text in the editor to generate a margin comment.",
+  );
   const [assistantMode, setAssistantMode] = useState("assistant_draft");
   const [assistantInput, setAssistantInput] = useState("");
   const [assistantOutput, setAssistantOutput] = useState("");
   const [assistantMeta, setAssistantMeta] = useState("No generation yet");
-  const editorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const editorRequestIdRef = useRef(0);
   const editorInputRef = useRef<HTMLTextAreaElement | null>(null);
   const editorGhostRef = useRef<HTMLPreElement | null>(null);
@@ -101,6 +118,16 @@ export default function Home() {
 
     setRemoteUrlInput(stored);
     void testRemote(stored, false);
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("reauth") === "drive") {
+      setSetupError("Google Drive access expired. Sign in with Google again to refresh permissions.");
+      params.delete("reauth");
+      const next = params.toString();
+      window.history.replaceState({}, "", next ? `/?${next}` : "/");
+    }
   }, []);
 
   useEffect(() => {
@@ -141,6 +168,12 @@ export default function Home() {
       });
       const data = await res.json();
       if (!res.ok) {
+        if (data.authExpired) {
+          await handleExpiredGoogleSession(
+            "Google Drive access expired. Sign in again to refresh permissions.",
+          );
+          return;
+        }
         throw new Error(data.error ?? "Could not load Google Drive files");
       }
       const files = (data.files as DriveFile[]) ?? [];
@@ -200,6 +233,12 @@ export default function Home() {
       });
       const data = await res.json();
       if (!res.ok) {
+        if (data.authExpired) {
+          await handleExpiredGoogleSession(
+            "Google Drive access expired while ingesting. Sign in again and retry.",
+          );
+          return;
+        }
         throw new Error(data.error ?? "Ingestion failed");
       }
       setIngestResult(data);
@@ -231,7 +270,7 @@ export default function Home() {
         "Colab bundle generated. Download it and run the included notebook in Colab.",
       );
       await refreshUserState();
-      setActiveTab("complete");
+      setActiveTab("directions");
     } catch (error) {
       setSetupError(error instanceof Error ? error.message : "Unknown error");
     } finally {
@@ -369,6 +408,65 @@ export default function Home() {
     }
   }
 
+  function updateEditorSelection() {
+    const element = editorInputRef.current;
+    if (!element) {
+      return;
+    }
+
+    const start = element.selectionStart ?? 0;
+    const end = element.selectionEnd ?? 0;
+    if (start === end) {
+      setEditorSelection(null);
+      return;
+    }
+
+    const text = editorInput.slice(start, end).trim();
+    if (!text) {
+      setEditorSelection(null);
+      return;
+    }
+
+    setEditorSelection({ start, end, text });
+  }
+
+  async function generateSelectionComment() {
+    if (!editorSelection?.text) {
+      setSelectionCommentMeta("Highlight the passage you want feedback on first.");
+      return;
+    }
+
+    setSelectionCommentMeta("Generating comment...");
+    try {
+      const payload = await generateRemote({
+        text: buildSelectionCommentRequest(
+          editorInput,
+          editorSelection.text,
+          commentInstruction,
+        ),
+        mode: "assistant_comment",
+        max_new_tokens: 120,
+        temperature: 0.55,
+        top_p: 0.95,
+      });
+      const comment = (payload.completion ?? "").trim();
+      setSelectionComment(
+        comment
+          ? {
+              selection: editorSelection.text,
+              comment,
+            }
+          : null,
+      );
+      setSelectionCommentMeta(
+        comment ? `Comment ready in ${payload.latency_ms ?? 0} ms` : "No comment returned yet.",
+      );
+    } catch (error) {
+      setSelectionComment(null);
+      setSelectionCommentMeta(error instanceof Error ? error.message : "Generation failed");
+    }
+  }
+
   function acceptSuggestion() {
     if (!currentSuggestion) {
       return;
@@ -397,10 +495,19 @@ export default function Home() {
 
   function handleTabSelect(tabId: TabId) {
     if ((tabId === "editor" || tabId === "assistant") && !setupComplete) {
-      setActiveTab("complete");
+      setActiveTab("directions");
       return;
     }
     setActiveTab(tabId);
+  }
+
+  async function handleExpiredGoogleSession(message: string) {
+    setSetupError(message);
+    setSetupMessage(null);
+    setDriveFiles([]);
+    setSelectedFileIds([]);
+    setUserState(null);
+    await signOut({ callbackUrl: "/?reauth=drive" });
   }
 
   function syncEditorGhostScroll() {
@@ -409,14 +516,6 @@ export default function Home() {
     }
     editorGhostRef.current.scrollTop = editorInputRef.current.scrollTop;
     editorGhostRef.current.scrollLeft = editorInputRef.current.scrollLeft;
-  }
-
-  if (status === "loading") {
-    return (
-      <main style={styles.loadingShell}>
-        <p style={styles.loadingText}>Loading...</p>
-      </main>
-    );
   }
 
   const documentsIngested =
@@ -481,7 +580,7 @@ export default function Home() {
   const lockedGenerationSurface =
     !setupComplete && (activeTab === "editor" || activeTab === "assistant");
   const backendSummary = remoteUsable
-    ? `Inference armed at ${verifiedRemoteUrl}`
+    ? `Inference working at ${verifiedRemoteUrl}`
     : remoteError
       ? `Inference blocked: ${remoteError}`
       : "No verified remote inference URL connected";
@@ -491,12 +590,12 @@ export default function Home() {
     kicker: string;
     locked?: boolean;
   }> = [
-    { id: "setup", label: "Setup", kicker: "Corpus" },
     {
-      id: "complete",
-      label: setupComplete ? "Complete" : "Finish Setup",
-      kicker: `${setupSteps.filter((step) => step.done).length}/4`,
+      id: "directions",
+      label: "Directions",
+      kicker: `${setupSteps.filter((step) => step.done).length}/4 done`,
     },
+    { id: "setup", label: "Setup", kicker: "Corpus" },
     {
       id: "inference",
       label: "Inference",
@@ -520,37 +619,13 @@ export default function Home() {
     syncEditorGhostScroll();
   }, [editorInput, currentSuggestion]);
 
-  useEffect(() => {
-    if (editorTimerRef.current) {
-      clearTimeout(editorTimerRef.current);
-      editorTimerRef.current = null;
-    }
-
-    if (!setupComplete || !remoteUsable || activeTab !== "editor") {
-      return;
-    }
-
-    if (editorInput.trim().length < 20) {
-      setCurrentSuggestion("");
-      setEditorMeta(
-        editorInput.trim().length === 0
-          ? "Idle"
-          : "Add a bit more text to get a continuation.",
-      );
-      return;
-    }
-
-    editorTimerRef.current = setTimeout(() => {
-      void requestEditorSuggestion();
-    }, 650);
-
-    return () => {
-      if (editorTimerRef.current) {
-        clearTimeout(editorTimerRef.current);
-        editorTimerRef.current = null;
-      }
-    };
-  }, [editorInput, setupComplete, remoteUsable, activeTab]);
+  if (status === "loading") {
+    return (
+      <main style={styles.loadingShell}>
+        <p style={styles.loadingText}>Loading...</p>
+      </main>
+    );
+  }
 
   return (
     <main style={styles.page}>
@@ -558,8 +633,14 @@ export default function Home() {
         <section style={styles.hero}>
           <div style={styles.heroGlow} />
           <div style={styles.heroCopy}>
-            <p style={styles.eyebrow}>Personal writing model</p>
-            <h1 style={styles.title}>ChatGPMe</h1>
+            <Image
+              src="/chatgpme-full-logo.png"
+              alt="ChatGPMe"
+              width={1108}
+              height={388}
+              priority
+              style={styles.heroLogo}
+            />
             <p style={styles.subtitle}>
               Ingest your Google Docs, package your training bundle for Colab,
               and wire the resulting inference endpoint back into a writing
@@ -568,9 +649,9 @@ export default function Home() {
           </div>
           <div style={styles.heroRail}>
             <div style={styles.heroStat}>
-              <span style={styles.heroStatLabel}>Pipeline</span>
+              <span style={styles.heroStatLabel}>Status</span>
               <strong style={styles.heroStatValue}>
-                {setupComplete ? "Combat Ready" : "Incomplete"}
+                {setupComplete ? "Ready" : "In progress"}
               </strong>
             </div>
             <div style={styles.heroStat}>
@@ -586,25 +667,72 @@ export default function Home() {
           </div>
         </section>
 
-        <header style={styles.topbar}>
-          <div style={styles.statusPill}>{backendSummary}</div>
-          {status === "authenticated" && (
+        {status === "authenticated" && (
+          <header style={styles.topbar}>
+            <div style={styles.statusPill}>{backendSummary}</div>
             <div style={styles.progressPill}>
-              {setupSteps.filter((step) => step.done).length} of 4 steps complete
+              {setupSteps.filter((step) => step.done).length} of 4 steps done
             </div>
-          )}
-        </header>
+          </header>
+        )}
 
         {!session ? (
-          <section style={styles.authCard}>
-            <h2 style={styles.sectionTitle}>Start With Google Drive</h2>
-            <p style={styles.sectionCopy}>
-              Sign in with Google to choose your docs, build a training bundle,
-              and connect the resulting Colab inference URL back into ChatGPMe.
-            </p>
-            <button style={styles.primaryButton} onClick={() => signIn("google")}>
-              Sign in with Google
-            </button>
+          <section style={styles.guestSection}>
+            <div style={styles.guestIntro}>
+              <p style={styles.eyebrow}>How it works</p>
+              <h2 style={styles.guestTitle}>Train your own writing model, then use it live.</h2>
+              <p style={styles.sectionCopy}>
+                ChatGPMe takes your Google Docs, packages a Colab training bundle,
+                and reconnects the resulting inference endpoint back into the app
+                for continuation suggestions, drafting, and line comments.
+              </p>
+              <div style={styles.guestSteps}>
+                <div style={styles.guestStep}>
+                  <span style={styles.guestStepNumber}>01</span>
+                  <div>
+                    <strong style={styles.guestStepTitle}>Connect Google Drive</strong>
+                    <p style={styles.guestStepCopy}>Choose recent docs or hand-pick the exact files you want in the corpus.</p>
+                  </div>
+                </div>
+                <div style={styles.guestStep}>
+                  <span style={styles.guestStepNumber}>02</span>
+                  <div>
+                    <strong style={styles.guestStepTitle}>Train in Colab</strong>
+                    <p style={styles.guestStepCopy}>Download the generated bundle, run the notebook, and start the remote inference server.</p>
+                  </div>
+                </div>
+                <div style={styles.guestStep}>
+                  <span style={styles.guestStepNumber}>03</span>
+                  <div>
+                    <strong style={styles.guestStepTitle}>Paste the inference link</strong>
+                    <p style={styles.guestStepCopy}>Bring the ngrok URL back here and unlock the writing surfaces with your trained adapter.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <aside style={styles.authCard}>
+              <div style={styles.authBadge}>
+                <Image
+                  src="/chatgpme-icon.png"
+                  alt="ChatGPMe mark"
+                  width={56}
+                  height={58}
+                />
+                <div>
+                  <p style={styles.eyebrow}>Get started</p>
+                  <h3 style={styles.authTitle}>Start with Google Drive</h3>
+                </div>
+              </div>
+              <p style={styles.sectionCopy}>
+                Sign in to ingest your docs, build the bundle, and wire the final
+                Colab inference URL back into ChatGPMe.
+              </p>
+              {setupError && <div style={styles.errorBox}>{setupError}</div>}
+              <button style={styles.primaryButton} onClick={() => signIn("google")}>
+                Sign in with Google
+              </button>
+            </aside>
           </section>
         ) : (
           <>
@@ -886,16 +1014,29 @@ export default function Home() {
               </section>
             )}
 
-            {activeTab === "complete" && (
+            {activeTab === "directions" && (
               <section style={styles.completeGrid}>
                 <section style={styles.cardLarge}>
                   <div style={styles.cardHeader}>
-                    <h2 style={styles.sectionTitle}>Complete The Pipeline</h2>
+                    <h2 style={styles.sectionTitle}>Directions</h2>
                     <p style={styles.sectionCopy}>
-                      The editor and assistant stay locked until the corpus,
-                      bundle, and remote endpoint all check out. No silent
-                      fallback.
+                      Run the workflow in this order: ingest your docs, generate
+                      the Colab bundle, train in Colab, launch the remote
+                      inference server, then paste the ngrok URL back into this
+                      app. The writing tabs stay locked until that path is real.
                     </p>
+                  </div>
+
+                  <div style={styles.stepsBox}>
+                    <h3 style={styles.stepsTitle}>End-to-end flow</h3>
+                    <ol style={styles.stepsList}>
+                      <li>Open the Setup tab and choose `Last N Docs` or `Select Specific Docs`.</li>
+                      <li>Ingest the corpus and build the personalized Colab bundle zip.</li>
+                      <li>Download the bundle and run the included notebook in Colab.</li>
+                      <li>Start the remote inference server and expose it with ngrok.</li>
+                      <li>Paste the ngrok URL into the Inference tab and verify it.</li>
+                      <li>Use Editor and Assistant only after the remote endpoint is verified.</li>
+                    </ol>
                   </div>
 
                   <div style={styles.checklist}>
@@ -920,7 +1061,7 @@ export default function Home() {
                             style={styles.secondaryButton}
                             onClick={() => setActiveTab(step.tab)}
                           >
-                            Open {step.tab}
+                            Open {step.tab === "setup" ? "Setup" : "Inference"}
                           </button>
                         )}
                       </div>
@@ -944,7 +1085,7 @@ export default function Home() {
                     <p style={styles.releaseCopy}>
                       {setupComplete
                         ? "Editor and Assistant are live with a verified remote adapter."
-                        : `${remainingSteps.length} setup step${remainingSteps.length === 1 ? "" : "s"} still missing.`}
+                        : `${remainingSteps.length} required step${remainingSteps.length === 1 ? "" : "s"} still missing.`}
                     </p>
                   </div>
 
@@ -955,7 +1096,7 @@ export default function Home() {
                         handleTabSelect(setupComplete ? "editor" : nextRequiredTab)
                       }
                     >
-                      {setupComplete ? "Open Editor" : "Go To Next Step"}
+                      {setupComplete ? "Open Editor" : "Go To Required Step"}
                     </button>
                     <button
                       style={styles.secondaryButton}
@@ -1081,12 +1222,12 @@ export default function Home() {
                   }
                 >
                   <section style={styles.panelGrid}>
-                    <section style={styles.cardLarge}>
+                    <section style={{ ...styles.cardLarge, gridTemplateRows: "auto 1fr", minHeight: "100%" }}>
                       <div style={styles.cardHeader}>
                         <h2 style={styles.sectionTitle}>Editor</h2>
                         <p style={styles.sectionCopy}>
-                          Type normally. Suggestions appear inline in a light
-                          tone. Press Tab to accept and Esc to dismiss.
+                          Type normally. Press ` to request a continuation,
+                          Tab to accept it, and Esc to dismiss it.
                         </p>
                       </div>
                       <div style={styles.editorShell}>
@@ -1100,9 +1241,29 @@ export default function Home() {
                         <textarea
                           ref={editorInputRef}
                           value={editorInput}
-                          onChange={(e) => setEditorInput(e.target.value)}
+                          onChange={(e) => {
+                            setEditorInput(e.target.value);
+                            if (currentSuggestion) {
+                              setCurrentSuggestion("");
+                            }
+                            const trimmed = e.target.value.trim();
+                            setEditorMeta(
+                              trimmed.length === 0
+                                ? "Idle"
+                                : trimmed.length < 20
+                                  ? "Add a bit more text to get a continuation."
+                                  : "Press ` (top left below Escape) to request a continuation.",
+                            );
+                          }}
+                          onSelect={updateEditorSelection}
+                          onKeyUp={updateEditorSelection}
+                          onMouseUp={updateEditorSelection}
                           onScroll={syncEditorGhostScroll}
                           onKeyDown={(e) => {
+                            if (e.key === "`" && !e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey) {
+                              e.preventDefault();
+                              void requestEditorSuggestion();
+                            }
                             if (e.key === "Tab" && currentSuggestion) {
                               e.preventDefault();
                               acceptSuggestion();
@@ -1119,42 +1280,65 @@ export default function Home() {
                     </section>
 
                     <section style={styles.cardSide}>
-                      <div style={styles.cardHeader}>
-                        <h2 style={styles.sectionTitle}>Continuation</h2>
-                        <p style={styles.sectionCopy}>{editorMeta}</p>
+                      <div style={styles.sideSection}>
+                        <div style={styles.cardHeader}>
+                          <h2 style={styles.sectionTitle}>Continuation</h2>
+                          <p style={styles.sectionCopy}>{editorMeta}</p>
+                        </div>
+                        <p style={styles.mutedText}>
+                          Press ` (top left below Escape) to generate. Press Tab to accept.
+                        </p>
+                        {!remoteUsable && (
+                          <p style={styles.mutedText}>
+                            Verify the remote inference URL in the Inference tab
+                            before using suggestions.
+                          </p>
+                        )}
                       </div>
-                      <p style={styles.mutedText}>
-                        Suggestions are requested automatically while you type.
-                      </p>
-                      <div style={styles.actionColumn}>
+
+                      <div style={styles.sideSection}>
+                        <div style={styles.cardHeader}>
+                          <h2 style={styles.sectionTitle}>Comment On Selection</h2>
+                          <p style={styles.sectionCopy}>{selectionCommentMeta}</p>
+                        </div>
+                        <div style={styles.selectionCard}>
+                          <span style={styles.metricLabel}>Selected text</span>
+                          <p style={styles.selectionPreview}>
+                            {editorSelection?.text || "Highlight a passage in the editor to target it."}
+                          </p>
+                        </div>
+                        <label style={styles.labelWide}>
+                          Comment focus
+                          <textarea
+                            value={commentInstruction}
+                            onChange={(e) => setCommentInstruction(e.target.value)}
+                            placeholder="Optional: ask for clarity, tone, evidence, structure..."
+                            style={styles.commentInput}
+                          />
+                        </label>
                         <button
                           style={styles.primaryButton}
-                          onClick={requestEditorSuggestion}
-                          disabled={!remoteUsable || !setupComplete}
+                          onClick={generateSelectionComment}
+                          disabled={!remoteUsable || !setupComplete || !editorSelection?.text}
                         >
-                          Generate Suggestion
+                          Generate Comment
                         </button>
-                        <button
-                          style={styles.secondaryButton}
-                          onClick={acceptSuggestion}
-                          disabled={!currentSuggestion}
-                        >
-                          Accept Suggestion
-                        </button>
-                        <button
-                          style={styles.secondaryButton}
-                          onClick={() => dismissSuggestion()}
-                          disabled={!currentSuggestion}
-                        >
-                          Dismiss
-                        </button>
+                        <div style={styles.commentBox}>
+                          <span style={styles.metricLabel}>Latest comment</span>
+                          {selectionComment ? (
+                            <>
+                              <blockquote style={styles.commentQuote}>
+                                {selectionComment.selection}
+                              </blockquote>
+                              <p style={styles.commentBody}>{selectionComment.comment}</p>
+                            </>
+                          ) : (
+                            <p style={styles.mutedText}>
+                              The model will leave a short margin-style note here.
+                            </p>
+                          )}
+                        </div>
                       </div>
-                      {!remoteUsable && (
-                        <p style={styles.mutedText}>
-                          Verify the remote inference URL in the Inference tab
-                          before using suggestions.
-                        </p>
-                      )}
                     </section>
                   </section>
                 </div>
@@ -1180,9 +1364,9 @@ export default function Home() {
                       <div style={styles.actionRow}>
                         <button
                           style={styles.primaryButton}
-                          onClick={() => handleTabSelect("complete")}
+                          onClick={() => handleTabSelect("directions")}
                         >
-                          Open Complete Tab
+                          Open Directions
                         </button>
                         <button
                           style={styles.secondaryButton}
@@ -1285,9 +1469,9 @@ export default function Home() {
                       <div style={styles.actionRow}>
                         <button
                           style={styles.primaryButton}
-                          onClick={() => handleTabSelect("complete")}
+                          onClick={() => handleTabSelect("directions")}
                         >
-                          Open Complete Tab
+                          Open Directions
                         </button>
                         <button
                           style={styles.secondaryButton}
@@ -1341,6 +1525,24 @@ function shortenSuggestion(text: string) {
   return words.slice(0, 18).join(" ");
 }
 
+function buildSelectionCommentRequest(
+  fullDocument: string,
+  selection: string,
+  instruction: string,
+) {
+  const trimmedInstruction = instruction.trim();
+  return [
+    "Document context:",
+    fullDocument.trim(),
+    "",
+    "Selected passage:",
+    selection.trim(),
+    "",
+    "Comment focus:",
+    trimmedInstruction || "Leave a concise, constructive margin comment on the selected passage.",
+  ].join("\n");
+}
+
 const styles: Record<string, React.CSSProperties> = {
   page: {
     minHeight: "100vh",
@@ -1380,6 +1582,12 @@ const styles: Record<string, React.CSSProperties> = {
     position: "relative",
     zIndex: 1,
   },
+  heroLogo: {
+    width: "min(100%, 720px)",
+    height: "auto",
+    display: "block",
+    marginBottom: 10,
+  },
   eyebrow: {
     fontSize: 12,
     letterSpacing: "0.28em",
@@ -1387,16 +1595,7 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#0d5c63",
     marginBottom: 12,
   },
-  title: {
-    fontSize: "clamp(3rem, 10vw, 5.4rem)",
-    lineHeight: 0.95,
-    letterSpacing: "-0.05em",
-    fontWeight: 800,
-    textTransform: "uppercase",
-    color: "#202124",
-  },
   subtitle: {
-    marginTop: 14,
     maxWidth: 760,
     color: "#63686d",
     lineHeight: 1.7,
@@ -1459,7 +1658,79 @@ const styles: Record<string, React.CSSProperties> = {
     padding: 28,
     display: "grid",
     gap: 16,
+    alignContent: "start",
+  },
+  guestSection: {
+    display: "grid",
+    gridTemplateColumns: "minmax(0, 1.4fr) minmax(320px, 0.9fr)",
+    gap: 18,
+    alignItems: "stretch",
+  },
+  guestIntro: {
+    background: "#fffdf8",
+    border: "1px solid #d6cfc2",
+    borderRadius: 24,
+    boxShadow: "0 14px 38px rgba(42,38,31,0.08)",
+    padding: 28,
+    display: "grid",
+    gap: 18,
+  },
+  guestTitle: {
+    fontSize: "clamp(1.9rem, 4vw, 3rem)",
+    lineHeight: 1.02,
+    letterSpacing: "-0.04em",
+    fontWeight: 800,
+    color: "#202124",
     maxWidth: 620,
+  },
+  authTitle: {
+    fontSize: 22,
+    fontWeight: 750,
+    color: "#202124",
+  },
+  authBadge: {
+    display: "grid",
+    gridTemplateColumns: "56px 1fr",
+    gap: 14,
+    alignItems: "center",
+  },
+  guestSteps: {
+    display: "grid",
+    gap: 14,
+  },
+  guestStep: {
+    display: "grid",
+    gridTemplateColumns: "56px 1fr",
+    gap: 14,
+    alignItems: "start",
+    padding: 16,
+    borderRadius: 18,
+    background: "#f7f3ea",
+    border: "1px solid #e4dccb",
+  },
+  guestStepNumber: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 56,
+    height: 56,
+    borderRadius: 999,
+    background: "#0d5c63",
+    color: "#fff",
+    fontWeight: 800,
+    letterSpacing: "0.08em",
+    fontSize: 14,
+  },
+  guestStepTitle: {
+    display: "block",
+    fontSize: 17,
+    fontWeight: 700,
+    color: "#202124",
+    marginBottom: 4,
+  },
+  guestStepCopy: {
+    color: "#6a6f73",
+    lineHeight: 1.6,
   },
   userCard: {
     background: "#fffdf8",
@@ -1567,6 +1838,10 @@ const styles: Record<string, React.CSSProperties> = {
     display: "grid",
     gap: 18,
     alignContent: "start",
+  },
+  sideSection: {
+    display: "grid",
+    gap: 14,
   },
   cardHeader: {
     display: "grid",
@@ -1925,6 +2200,7 @@ const styles: Record<string, React.CSSProperties> = {
   editorShell: {
     position: "relative",
     minHeight: 420,
+    height: "100%",
   },
   editorGhost: {
     position: "absolute",
@@ -1949,6 +2225,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   editorArea: {
     minHeight: 420,
+    height: "100%",
     width: "100%",
     position: "relative",
     borderRadius: 16,
@@ -1983,6 +2260,54 @@ const styles: Record<string, React.CSSProperties> = {
     border: "1px dashed #d6cfc2",
     background: "linear-gradient(180deg, #e4f0ef, rgba(255,255,255,0.7))",
     color: "#202124",
+  },
+  selectionCard: {
+    display: "grid",
+    gap: 8,
+    padding: 14,
+    borderRadius: 16,
+    border: "1px solid #d6cfc2",
+    background: "#f6f4ed",
+  },
+  selectionPreview: {
+    color: "#202124",
+    whiteSpace: "pre-wrap",
+    lineHeight: 1.6,
+  },
+  commentInput: {
+    minHeight: 88,
+    width: "100%",
+    borderRadius: 16,
+    border: "1px solid #d6cfc2",
+    background: "#fff",
+    color: "#202124",
+    padding: 14,
+    resize: "vertical",
+    lineHeight: 1.6,
+    fontSize: 15,
+    fontFamily: "inherit",
+  },
+  commentBox: {
+    display: "grid",
+    gap: 10,
+    padding: 14,
+    borderRadius: 16,
+    border: "1px solid #d6cfc2",
+    background: "#fff",
+  },
+  commentQuote: {
+    margin: 0,
+    padding: "12px 14px",
+    borderLeft: "4px solid #b8d1cf",
+    background: "#f6f4ed",
+    color: "#4f565b",
+    whiteSpace: "pre-wrap",
+    lineHeight: 1.6,
+  },
+  commentBody: {
+    color: "#202124",
+    lineHeight: 1.7,
+    whiteSpace: "pre-wrap",
   },
   mutedText: {
     color: "#6a6f73",
