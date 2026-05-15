@@ -1,43 +1,29 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
+
 import { authOptions } from "@/lib/auth";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
-
-  if (!session?.accessToken) {
+  if (!session?.user?.email) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const {
-    userId,
-    maxFiles = 25,
-    ownerOnly = true,
-    fileIds = [],
-  } = await req.json();
-
-  if (!userId) {
-    return NextResponse.json({ error: "userId is required" }, { status: 400 });
-  }
-
+  const { bundleName } = await req.json().catch(() => ({}));
   const backendUrl = process.env.BACKEND_URL ?? "http://localhost:8000";
 
   try {
-    const res = await fetch(`${backendUrl}/ingest/gdrive`, {
+    const res = await fetch(`${backendUrl}/bundle/build`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        user_id: userId,
-        access_token: session.accessToken,
-        max_files: maxFiles,
-        owner_only: ownerOnly,
-        file_ids: fileIds,
+        user_id: session.user.email,
+        bundle_name: bundleName,
       }),
     });
 
     const raw = await res.text();
     let data: Record<string, unknown> | null = null;
-
     try {
       data = raw ? (JSON.parse(raw) as Record<string, unknown>) : null;
     } catch {
@@ -52,15 +38,15 @@ export async function POST(req: Request) {
             raw ||
             "Backend error",
         },
-        { status: res.status }
+        { status: res.status },
       );
     }
 
     return NextResponse.json(data ?? {});
   } catch {
     return NextResponse.json(
-      { error: `Could not reach ingestion backend at ${backendUrl}` },
-      { status: 502 }
+      { error: `Could not reach backend at ${backendUrl}` },
+      { status: 502 },
     );
   }
 }

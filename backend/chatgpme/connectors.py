@@ -127,6 +127,21 @@ class _GoogleDriveMixin:
 
         return buffer.getvalue().decode("utf-8", errors="ignore")
 
+    def _get_file_metadata(self, service, file_id: str) -> dict[str, Any]:
+        try:
+            response = (
+                service.files()
+                .get(
+                    fileId=file_id,
+                    fields="id,name,mimeType,modifiedTime",
+                    supportsAllDrives=True,
+                )
+                .execute()
+            )
+        except Exception as exc:
+            raise self._normalize_drive_error(exc) from exc
+        return response
+
     def _doc_type_from_mime(self, mime_type: str) -> str:
         mapping = {
             "application/vnd.google-apps.document": "gdoc",
@@ -231,11 +246,44 @@ class AccessTokenGoogleDriveConnector(_GoogleDriveMixin, BaseConnector):
         folder_id = source_config.get("folder_id")
         owner_only = bool(source_config.get("owner_only", True))
         max_files = int(source_config.get("max_files", 25))
+        file_ids = [str(file_id) for file_id in source_config.get("file_ids", []) if str(file_id).strip()]
         include_mime_types = set(source_config.get("include_mime_types", self.DEFAULT_MIME_TYPES))
 
         service = self._build_service_from_token(access_token)
-        files = self._list_files(service, folder_id, None, owner_only, max_files, include_mime_types)
+        if file_ids:
+            files = [self._get_file_metadata(service, file_id) for file_id in file_ids]
+            files = [item for item in files if item.get("mimeType") in include_mime_types]
+        else:
+            files = self._list_files(service, folder_id, None, owner_only, max_files, include_mime_types)
         return self._files_to_documents(files, service, user_id)
+
+    def list_user_files(
+        self,
+        access_token: str,
+        *,
+        folder_id: str | None = None,
+        owner_only: bool = True,
+        max_files: int = 25,
+        include_mime_types: set[str] | None = None,
+    ) -> list[dict[str, Any]]:
+        service = self._build_service_from_token(access_token)
+        files = self._list_files(
+            service,
+            folder_id=folder_id,
+            custom_query=None,
+            owner_only=owner_only,
+            max_files=max_files,
+            include_mime_types=include_mime_types or self.DEFAULT_MIME_TYPES,
+        )
+        return [
+            {
+                "id": item["id"],
+                "name": item.get("name", "Untitled"),
+                "mime_type": item.get("mimeType", ""),
+                "modified_time": item.get("modifiedTime"),
+            }
+            for item in files
+        ]
 
     def _build_service_from_token(self, access_token: str):
         try:

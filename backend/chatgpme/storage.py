@@ -150,3 +150,51 @@ class CorpusStore:
             )
             for row in rows
         ]
+
+    def get_user_state(self, user_id: str) -> dict[str, object]:
+        user_dir = self.root / "users" / user_id
+        docs_path = user_dir / "documents.jsonl"
+        chunks_path = user_dir / "chunks.jsonl"
+        style_train_path = user_dir / "style_train.jsonl"
+        bundles_dir = user_dir / "bundles"
+
+        with sqlite3.connect(self.sqlite_path) as conn:
+            doc_count = conn.execute(
+                "SELECT COUNT(*) FROM documents WHERE user_id = ?",
+                (user_id,),
+            ).fetchone()[0]
+            chunk_count = conn.execute(
+                """
+                SELECT COUNT(*)
+                FROM chunks c
+                JOIN documents d ON d.id = c.document_id
+                WHERE d.user_id = ?
+                """,
+                (user_id,),
+            ).fetchone()[0]
+
+        available_bundles: list[dict[str, object]] = []
+        if bundles_dir.exists():
+            for path in sorted(bundles_dir.glob("*.zip")):
+                available_bundles.append(
+                    {
+                        "name": path.name,
+                        "size_bytes": path.stat().st_size,
+                    }
+                )
+
+        style_train_rows = 0
+        if style_train_path.exists():
+            with style_train_path.open("r", encoding="utf-8") as handle:
+                style_train_rows = sum(1 for line in handle if line.strip())
+
+        return {
+            "user_id": user_id,
+            "has_corpus": docs_path.exists() and chunks_path.exists(),
+            "documents_ingested": int(doc_count),
+            "chunks_created": int(chunk_count),
+            "style_train_path": str(style_train_path),
+            "style_train_rows": style_train_rows,
+            "bundle_dir": str(bundles_dir),
+            "available_bundles": available_bundles,
+        }

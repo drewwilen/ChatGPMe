@@ -93,7 +93,7 @@ class GenerationBackend:
 
             base_model = AutoModelForCausalLM.from_pretrained(
                 self.model_name,
-                dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+                torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
             )
 
             model = base_model
