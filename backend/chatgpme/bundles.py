@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import re
 import shutil
+import tempfile
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -26,7 +27,6 @@ def _adapter_name(bundle_name: str) -> str:
 class BundleResult:
     user_id: str
     bundle_name: str
-    bundle_path: str
     dataset_rows: int
     adapter_dir_name: str
 
@@ -44,14 +44,40 @@ class ColabBundleBuilder:
 
         resolved_bundle_name = bundle_name or f"colab_upload_{_slugify(user_id)}"
         adapter_dir_name = _adapter_name(resolved_bundle_name)
-        user_dir = style_train_path.parent
-        bundles_dir = user_dir / "bundles"
-        bundle_dir = bundles_dir / resolved_bundle_name
-        zip_path = bundles_dir / f"{resolved_bundle_name}.zip"
 
-        bundles_dir.mkdir(parents=True, exist_ok=True)
-        if bundle_dir.exists():
-            shutil.rmtree(bundle_dir)
+        return BundleResult(
+            user_id=user_id,
+            bundle_name=resolved_bundle_name,
+            dataset_rows=int(state["style_train_rows"]),
+            adapter_dir_name=adapter_dir_name,
+        )
+
+    def create_bundle_archive(self, user_id: str, bundle_name: str | None = None) -> tuple[BundleResult, str, str]:
+        result = self.build_for_user(user_id, bundle_name)
+        temp_root = tempfile.mkdtemp(prefix=f"{result.bundle_name}-")
+        temp_root_path = Path(temp_root)
+        bundle_dir = temp_root_path / result.bundle_name
+        zip_path = temp_root_path / f"{result.bundle_name}.zip"
+
+        self._populate_bundle_dir(
+            bundle_dir=bundle_dir,
+            user_id=user_id,
+            bundle_name=result.bundle_name,
+            adapter_dir_name=result.adapter_dir_name,
+        )
+        self._zip_directory(bundle_dir, zip_path)
+        return result, str(zip_path), temp_root
+
+    def _populate_bundle_dir(
+        self,
+        *,
+        bundle_dir: Path,
+        user_id: str,
+        bundle_name: str,
+        adapter_dir_name: str,
+    ) -> None:
+        state = self.store.get_user_state(user_id)
+        style_train_path = Path(str(state["style_train_path"]))
         bundle_dir.mkdir(parents=True, exist_ok=True)
 
         shutil.copy2(style_train_path, bundle_dir / "style_train.jsonl")
@@ -66,23 +92,11 @@ class ColabBundleBuilder:
         )
         shutil.copy2(self.repo_root / "requirements.txt", bundle_dir / "requirements.txt")
 
-        self._write_readme(bundle_dir / "README.md", user_id, resolved_bundle_name)
+        self._write_readme(bundle_dir / "README.md", user_id, bundle_name)
         self._write_runner_notebook(
             bundle_dir / "chatgpme_colab_upload_runner.ipynb",
-            resolved_bundle_name,
+            bundle_name,
             adapter_dir_name,
-        )
-
-        if zip_path.exists():
-            zip_path.unlink()
-        self._zip_directory(bundle_dir, zip_path)
-
-        return BundleResult(
-            user_id=user_id,
-            bundle_name=resolved_bundle_name,
-            bundle_path=str(zip_path),
-            dataset_rows=int(state["style_train_rows"]),
-            adapter_dir_name=adapter_dir_name,
         )
 
     def _write_readme(self, path: Path, user_id: str, bundle_name: str) -> None:
@@ -194,6 +208,13 @@ class ColabBundleBuilder:
             "  --max-new-tokens 120\n",
         )
         set_cell(19, f"!find {adapter_dir_name} -maxdepth 2 -type f | sort\n")
+        set_cell(
+            22,
+            'NGROK_AUTHTOKEN = "PASTE_YOUR_NGROK_AUTHTOKEN_HERE"\n'
+            'if NGROK_AUTHTOKEN == "PASTE_YOUR_NGROK_AUTHTOKEN_HERE":\n'
+            '    raise ValueError("Set your ngrok authtoken in this cell before continuing.")\n'
+            "!ngrok config add-authtoken {NGROK_AUTHTOKEN}\n",
+        )
         set_cell(
             23,
             f"%cd {bundle_dir}\n"
