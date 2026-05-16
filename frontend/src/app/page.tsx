@@ -270,7 +270,6 @@ export default function Home() {
         "Colab bundle generated. Download it and run the included notebook in Colab.",
       );
       await refreshUserState();
-      setActiveTab("directions");
     } catch (error) {
       setSetupError(error instanceof Error ? error.message : "Unknown error");
     } finally {
@@ -964,13 +963,9 @@ export default function Home() {
                       <strong style={styles.metricValue}>{documentsIngested}</strong>
                     </div>
                     <div style={styles.metricTile}>
-                      <span style={styles.metricLabel}>Chunks</span>
-                      <strong style={styles.metricValue}>{chunksCreated}</strong>
-                    </div>
-                    <div style={styles.metricTile}>
                       <span style={styles.metricLabel}>Training rows</span>
                       <strong style={styles.metricValue}>
-                        {userState?.style_train_rows ?? 0}
+                        {userState?.style_train_rows ?? chunksCreated}
                       </strong>
                     </div>
                   </div>

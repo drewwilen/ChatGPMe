@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import os
+import shutil
 
-from fastapi import FastAPI, HTTPException
+from fastapi import BackgroundTasks, FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -148,7 +149,6 @@ def build_bundle(req: BundleBuildRequest) -> dict:
         return {
             "user_id": result.user_id,
             "bundle_name": result.bundle_name,
-            "bundle_path": result.bundle_path,
             "dataset_rows": result.dataset_rows,
             "adapter_dir_name": result.adapter_dir_name,
             "download_path": f"/bundle/download/{result.user_id}/{result.bundle_name}",
@@ -160,11 +160,16 @@ def build_bundle(req: BundleBuildRequest) -> dict:
 
 
 @app.get("/bundle/download/{user_id}/{bundle_name}")
-def download_bundle(user_id: str, bundle_name: str) -> FileResponse:
-    bundle_path = pipeline.store.root / "users" / user_id / "bundles" / f"{bundle_name}.zip"
-    if not bundle_path.exists():
-        raise HTTPException(status_code=404, detail="Bundle not found")
-    return FileResponse(bundle_path, media_type="application/zip", filename=bundle_path.name)
+def download_bundle(user_id: str, bundle_name: str, background_tasks: BackgroundTasks) -> FileResponse:
+    try:
+        result, bundle_path, temp_root = bundle_builder.create_bundle_archive(user_id, bundle_name)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Unexpected bundle download error: {exc}") from exc
+
+    background_tasks.add_task(shutil.rmtree, temp_root, ignore_errors=True)
+    return FileResponse(bundle_path, media_type="application/zip", filename=f"{result.bundle_name}.zip")
 
 
 @app.post("/generate")
